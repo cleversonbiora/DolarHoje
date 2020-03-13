@@ -30,12 +30,12 @@ export default class DollarRepository {
 
     static getHistory = async () => { 
         try {
-            let nextUpdateDate = new Date((new Date()).getTime() - 10 * 60000);
+            let nextUpdateDate = new Date((new Date()).getDate() - 1);
             let result = JSON.parse(await AsyncStorage.getItem(DOLLAR_HISTORY));
             if(!result || new Date(result.updateDate) < nextUpdateDate){
-                result = await DollarService.getNow();
+                result = await DollarService.getHistory();
                 result.updateDate = new Date();
-                DollarRepository.setNow(result);
+                DollarRepository.setHistory(result);
             }
             return result;
         } catch (error) {

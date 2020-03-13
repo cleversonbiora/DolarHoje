@@ -1,35 +1,38 @@
 import React, { Component } from 'react'
-import { TouchableOpacity,Text, View, TouchableHighlightBase, StyleSheet, Platform, Dimensions, ScrollView, RefreshControl } from 'react-native'
+import { TouchableOpacity, FlatList,Text, View, TouchableHighlightBase, StyleSheet, Platform, Dimensions, ScrollView, RefreshControl } from 'react-native'
 import DollarRepository from './src/repositories/DollarRepository';
+import { formatDate } from './src/helpers/functions';
+import DolarRow from './src/components/DolarRow';
+import { PushService } from './src/services/PushService';
 
 export default class App extends Component {
   constructor(props){
     super(props);
     this.state = {
       dollars:[],
+      history:[],
       lastUpdate: null,
-      refreshing:false
+      refreshing:false,
+      index:0
     }
   }
   componentDidMount(){
-      this.load();
+     this.load();
   }
   load = async () =>{
     let result = await DollarRepository.getNow();
     if(result)
       this.setState({dollars:result.docs, lastUpdate: result.updateDate});
+
+    let history = await DollarRepository.getHistory();
+    if(history)
+       this.setState({history:history.docs});
   }
   onRefresh = () => {
       this.setState({refreshing: true});
       this.load();
+      PushService('Amendoim','Torrado');
       this.setState({refreshing: false});
-  }
-  renderDollarRow(row){
-    return(
-      <View>
-        <Text>{row.bidvalue}</Text>
-      </View>
-    );
   }
   renderSelect(text, index){
     return(
@@ -41,11 +44,13 @@ export default class App extends Component {
   render() {
     const {
       dollars,
+      history,
+      index,
       lastUpdate
     } = this.state;
     const tab1 = this.renderSelect('INTRADAY',0); 
-    const tab2 = this.renderSelect('HISTORICO',1); 
-    const values = dollars.slice(1).map(row => this.renderDollarRow(row))
+    const tab2 = this.renderSelect('HISTÓRICO',1); 
+
     return (
       <View style={styles.container}>
         <ScrollView        
@@ -77,15 +82,19 @@ export default class App extends Component {
                     <Text style={styles.subtitle}> VARIAÇÃO </Text>
                     <Text  style={{...styles.valueDefault, color: (dollars[0].variationpercentbid > 0 ? '#20c634' : '#d5150b')}}> {dollars[0].variationpercentbid} <Text style={styles.rs}>%</Text></Text>
               </View>
-              {lastUpdate && <Text style={styles.update}> Ultima Atualização {(new Date(lastUpdate)).toLocaleDateString()} {(new Date(lastUpdate)).toLocaleTimeString()}</Text>}
+              {lastUpdate && <Text style={styles.update}> Ultima Atualização {formatDate(dollars[0].date)}</Text>}
             </View>
-            {/* <View style={styles.tabSelect}>
+            <View style={styles.tabSelect}>
               {tab1}
               {tab2}
             </View>
             <View>
-            {values}
-            </View> */}
+            <FlatList
+                data={index == 1 ? history.slice(0,15) : dollars.slice(1)}
+                renderItem={({item}) => <DolarRow dollar={item} />}
+                keyExtractor={(item) => item.date}
+              />
+            </View>
             </>
           :
           <Text style={styles.title}> Carregando... </Text>
